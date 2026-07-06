@@ -146,3 +146,11 @@ Windows 构建建议使用 Visual Studio Build Tools 的 x64 Native Tools 环境
 ## 许可证
 
 本仓库沿用上游项目的 MIT License。详见 [`LICENSE`](LICENSE)。
+
+## 致谢
+
+本项目是在以下上游项目和社区讨论基础上完成的衍生集成版本：
+
+- 感谢 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) 提供 CC Switch 的主体应用、代理、路由和故障转移能力。
+- 感谢 [neteroster/CodexCont](https://github.com/neteroster/CodexCont) 提供 Codex reasoning continuation 的核心思路与参考实现。
+- 感谢 [LINUX DO 社区](https://linux.do/) 对相关工具链、使用场景和实践经验的讨论与分享。
