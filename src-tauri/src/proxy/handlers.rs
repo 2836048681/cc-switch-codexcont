@@ -788,7 +788,7 @@ pub async fn handle_responses(
                 config: codex_continue_config,
             },
         );
-        return build_codex_folded_stream_response(response);
+        return build_codex_folded_stream_response(response, &ctx, &state);
     }
 
     process_response(
@@ -803,6 +803,8 @@ pub async fn handle_responses(
 
 fn build_codex_folded_stream_response(
     response: super::hyper_client::ProxyResponse,
+    ctx: &RequestContext,
+    state: &ProxyState,
 ) -> Result<axum::response::Response, ProxyError> {
     let status = response.status();
     let mut response_headers = response.headers().clone();
@@ -813,11 +815,97 @@ fn build_codex_folded_stream_response(
         builder = builder.header(key, value);
     }
 
-    let body = axum::body::Body::from_stream(response.bytes_stream());
+    let usage_collector = create_codex_folded_usage_collector(ctx, state, status.as_u16());
+    let body = axum::body::Body::from_stream(create_logged_passthrough_stream(
+        response.bytes_stream(),
+        ctx.tag,
+        usage_collector,
+        ctx.streaming_timeout_config(),
+        None,
+    ));
     builder.body(body).map_err(|e| {
         log::error!("[Codex] 构建 folded Responses 流失败: {e}");
         ProxyError::Internal(format!("Failed to build folded responses stream: {e}"))
     })
+}
+
+fn create_codex_folded_usage_collector(
+    ctx: &RequestContext,
+    state: &ProxyState,
+    status_code: u16,
+) -> Option<SseUsageCollector> {
+    if !usage_logging_enabled(state) {
+        return None;
+    }
+
+    let state = state.clone();
+    let provider_id = ctx.provider.id.clone();
+    let request_model = ctx.request_model.clone();
+    let fallback_model = ctx
+        .outbound_model
+        .clone()
+        .unwrap_or_else(|| ctx.request_model.clone());
+    let app_type_str = ctx.app_type_str;
+    let start_time = ctx.start_time;
+    let session_id = ctx.session_id.clone();
+
+    Some(SseUsageCollector::new(
+        start_time,
+        Some(codex_stream_usage_event_filter),
+        move |events, first_token_ms| {
+            let Some(usage) = TokenUsage::from_codex_stream_events_auto(&events)
+                .filter(TokenUsage::has_billable_tokens)
+            else {
+                log::debug!("[CodexContinue] folded stream usage 全 0 或缺失，跳过 proxy 记录");
+                return;
+            };
+
+            let model = usage
+                .model
+                .clone()
+                .filter(|m| !m.is_empty())
+                .or_else(|| {
+                    events.iter().find_map(|event| {
+                        if event.get("type")?.as_str()? == "response.completed" {
+                            event
+                                .get("response")?
+                                .get("model")?
+                                .as_str()
+                                .filter(|m| !m.is_empty())
+                                .map(str::to_string)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .unwrap_or_else(|| fallback_model.clone());
+
+            let latency_ms = start_time.elapsed().as_millis() as u64;
+            let state = state.clone();
+            let provider_id = provider_id.clone();
+            let request_model = request_model.clone();
+            let outbound_model = fallback_model.clone();
+            let session_id = session_id.clone();
+
+            tokio::spawn(async move {
+                log_usage(
+                    &state,
+                    &provider_id,
+                    app_type_str,
+                    &model,
+                    &request_model,
+                    &outbound_model,
+                    usage,
+                    latency_ms,
+                    first_token_ms,
+                    true,
+                    status_code,
+                    Some(session_id),
+                )
+                .await;
+            });
+        },
+    ))
 }
 
 /// 处理 /v1/responses/compact 请求（OpenAI Responses Compact API - Codex CLI 透传）
