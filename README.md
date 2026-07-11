@@ -2,7 +2,7 @@
 
 # CC Switch CodexCont Build
 
-### 基于 CC Switch v3.16.5 的 Codex reasoning （思考终端降智解决版）自动续写增强版
+### 基于 CC Switch v3.16.5 的 Codex reasoning （思考中断降智解决版）自动续写增强版
 
 [![Base](https://img.shields.io/badge/base-CC%20Switch%203.16.5-blue)](https://github.com/farion1231/cc-switch)
 [![CodexCont](https://img.shields.io/badge/feature-CodexCont-purple)](https://github.com/neteroster/CodexCont)
