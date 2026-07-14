@@ -1,3 +1,40 @@
+> [!NOTE]
+> This repository is a community build based on the exact CC Switch v3.17.0
+> release commit [`3d176b9`](https://github.com/farion1231/cc-switch/commit/3d176b98cc0bfd151a42882e88ab59b62083b92f).
+> It is not an official CC Switch release.
+
+# CC Switch v3.17.0 CodexCont + Grok Build
+
+This build keeps the complete upstream v3.17.0 feature set and adds two integrations:
+
+- **Codex reasoning continuation**: folds native `/v1/responses` continuation rounds
+  inside the existing CC Switch routing, retry, failover, and usage-recording flow.
+- **Grok Build management and routing**: adds an independent Grok application,
+  scans and manages `~/.grok/config.toml`, and provides dedicated
+  `/grok/v1/responses` and `/grok/v1/chat/completions` routes.
+
+xAI-compatible Responses requests are forwarded in their native format without
+conversion to Chat Completions. Grok configuration remains separate from Codex
+configuration and supports model profiles, web search, subagents, extra headers,
+privacy settings, OAuth fallback, and automatic backups.
+
+## Windows Packages
+
+Prebuilt artifacts and SHA-256 checksums are available in
+[`release-assets/`](release-assets/):
+
+| File | Purpose |
+| --- | --- |
+| `CC-Switch-v3.17.0-Windows-x64-Setup.exe` | Windows x64 installer |
+| `CC-Switch-v3.17.0-Windows.msi` | Windows MSI package |
+| `CC-Switch-v3.17.0-Windows-Portable.zip` | Portable package |
+| `SHA256SUMS.txt` | SHA-256 checksums |
+
+The custom database schema version is 14. Existing schema-v13 databases are
+migrated in place while preserving existing Grok proxy configuration.
+
+---
+
 <div align="center">
 
 # CC Switch
