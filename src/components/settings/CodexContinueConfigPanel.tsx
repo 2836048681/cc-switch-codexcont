@@ -6,10 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  settingsApi,
-  type CodexContinueConfig,
-} from "@/lib/api/settings";
+import { settingsApi, type CodexContinueConfig } from "@/lib/api/settings";
 
 const DEFAULT_CODEX_CONTINUE_CONFIG: CodexContinueConfig = {
   enabled: true,

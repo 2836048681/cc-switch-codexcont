@@ -144,6 +144,7 @@ pub(crate) fn build_provider_from_request(
     let settings_config = match app_type {
         AppType::Claude | AppType::ClaudeDesktop => build_claude_settings(request),
         AppType::Codex => build_codex_settings(request),
+        AppType::Grok => build_grok_settings(request),
         AppType::Gemini => build_gemini_settings(request),
         AppType::OpenCode => build_opencode_settings(request),
         AppType::OpenClaw => build_additive_app_settings(request),
@@ -267,6 +268,8 @@ fn build_provider_meta(request: &DeepLinkImportRequest) -> Result<Option<Provide
         coding_plan_provider: None,
         access_key_id: None,
         secret_access_key: None,
+        team_organization_id: None,
+        team_project_id: None,
     };
 
     Ok(Some(ProviderMeta {
@@ -422,6 +425,22 @@ requires_openai_auth = true
             "OPENAI_API_KEY": request.api_key,
         },
         "config": config_toml
+    })
+}
+
+fn build_grok_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
+    let model = request.model.as_deref().unwrap_or("grok-4.5");
+    let endpoint = get_primary_endpoint(request);
+    let name = request.name.as_deref().unwrap_or(model);
+    let config = format!(
+        "[models]\ndefault = \"ccswitch\"\n\n[model.ccswitch]\nmodel = {}\nbase_url = {}\nname = {}\napi_backend = \"responses\"\n",
+        toml_edit::Value::from(model).to_string(),
+        toml_edit::Value::from(endpoint).to_string(),
+        toml_edit::Value::from(name).to_string(),
+    );
+    json!({
+        "auth": { "OPENAI_API_KEY": request.api_key },
+        "config": config,
     })
 }
 

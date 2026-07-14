@@ -2,8 +2,13 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CodexAuthSection, CodexConfigSection } from "./CodexConfigSections";
 import { CodexCommonConfigModal } from "./CodexCommonConfigModal";
+import { GrokGlobalConfigModal } from "./GrokGlobalConfigModal";
 
 interface CodexConfigEditorProps {
+  appId?: "codex" | "grok";
+
+  showCodexFeatures?: boolean;
+
   authValue: string;
 
   configValue: string;
@@ -22,11 +27,11 @@ interface CodexConfigEditorProps {
 
   useCommonConfig: boolean;
 
-  onCommonConfigToggle: (checked: boolean) => void;
+  onCommonConfigToggle: (checked: boolean) => void | Promise<void>;
 
   commonConfigSnippet: string;
 
-  onCommonConfigSnippetChange: (value: string) => boolean;
+  onCommonConfigSnippetChange: (value: string) => boolean | Promise<boolean>;
 
   onCommonConfigErrorClear: () => void;
 
@@ -42,6 +47,8 @@ interface CodexConfigEditorProps {
 }
 
 const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
+  appId = "codex",
+  showCodexFeatures = true,
   authValue,
   configValue,
   providerName,
@@ -63,6 +70,7 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isCommonConfigModalOpen, setIsCommonConfigModalOpen] = useState(false);
+  const [isGrokGlobalConfigOpen, setIsGrokGlobalConfigOpen] = useState(false);
 
   const handleCloseCommonConfigModal = () => {
     onCommonConfigErrorClear();
@@ -81,6 +89,7 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
 
       {/* Auth JSON Section */}
       <CodexAuthSection
+        appId={appId}
         value={authValue}
         onChange={onAuthChange}
         onBlur={onAuthBlur}
@@ -90,6 +99,7 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
 
       {/* Config TOML Section */}
       <CodexConfigSection
+        appId={appId}
         value={configValue}
         onChange={onConfigChange}
         providerName={providerName}
@@ -100,18 +110,28 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
         commonConfigError={commonConfigError}
         configError={configError}
         isProxyTakeover={isProxyTakeover}
+        showCodexFeatures={showCodexFeatures}
+        onEditGrokGlobalConfig={() => setIsGrokGlobalConfigOpen(true)}
       />
 
       {/* Common Config Modal */}
-      <CodexCommonConfigModal
-        isOpen={isCommonConfigModalOpen}
-        onClose={handleCloseCommonConfigModal}
-        value={commonConfigSnippet}
-        onSave={onCommonConfigSnippetChange}
-        error={commonConfigError}
-        onExtract={onExtract}
-        isExtracting={isExtracting}
-      />
+      {showCodexFeatures && (
+        <CodexCommonConfigModal
+          isOpen={isCommonConfigModalOpen}
+          onClose={handleCloseCommonConfigModal}
+          value={commonConfigSnippet}
+          onSave={onCommonConfigSnippetChange}
+          error={commonConfigError}
+          onExtract={onExtract}
+          isExtracting={isExtracting}
+        />
+      )}
+      {appId === "grok" && (
+        <GrokGlobalConfigModal
+          isOpen={isGrokGlobalConfigOpen}
+          onClose={() => setIsGrokGlobalConfigOpen(false)}
+        />
+      )}
     </div>
   );
 };

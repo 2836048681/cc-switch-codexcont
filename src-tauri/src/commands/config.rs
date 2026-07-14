@@ -17,6 +17,32 @@ pub async fn get_claude_config_status() -> Result<ConfigStatus, String> {
 
 use std::str::FromStr;
 
+#[tauri::command]
+pub async fn read_grok_global_config() -> Result<serde_json::Value, String> {
+    let path = crate::grok_config::get_grok_config_path();
+    let exists = path.exists();
+    let content = if exists {
+        std::fs::read_to_string(&path).map_err(|e| e.to_string())?
+    } else {
+        String::new()
+    };
+    Ok(serde_json::json!({
+        "path": path.to_string_lossy(),
+        "content": content,
+        "exists": exists,
+    }))
+}
+
+#[tauri::command]
+pub async fn write_grok_global_config(content: String) -> Result<(), String> {
+    crate::grok_config::write_grok_config_text(&content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn apply_grok_privacy_protection() -> Result<String, String> {
+    crate::grok_config::apply_privacy_protection_live().map_err(|e| e.to_string())
+}
+
 fn invalid_json_format_error(error: serde_json::Error) -> String {
     let lang = settings::get_settings()
         .language
@@ -90,6 +116,14 @@ pub async fn get_config_status(
 
             Ok(ConfigStatus { exists, path })
         }
+        AppType::Grok => {
+            let config_path = crate::grok_config::get_grok_config_path();
+            let exists = config_path.exists();
+            let path = crate::grok_config::get_grok_config_dir()
+                .to_string_lossy()
+                .to_string();
+            Ok(ConfigStatus { exists, path })
+        }
         AppType::Gemini => {
             let env_path = crate::gemini_config::get_gemini_env_path();
             let exists = env_path.exists();
@@ -142,6 +176,7 @@ pub async fn get_config_dir(app: String) -> Result<String, String> {
             crate::claude_desktop_config::get_config_library_path().map_err(|e| e.to_string())?
         }
         AppType::Codex => codex_config::get_codex_config_dir(),
+        AppType::Grok => crate::grok_config::get_grok_config_dir(),
         AppType::Gemini => crate::gemini_config::get_gemini_dir(),
         AppType::OpenCode => crate::opencode_config::get_opencode_dir(),
         AppType::OpenClaw => crate::openclaw_config::get_openclaw_dir(),
@@ -159,6 +194,7 @@ pub async fn open_config_folder(handle: AppHandle, app: String) -> Result<bool, 
             crate::claude_desktop_config::get_config_library_path().map_err(|e| e.to_string())?
         }
         AppType::Codex => codex_config::get_codex_config_dir(),
+        AppType::Grok => crate::grok_config::get_grok_config_dir(),
         AppType::Gemini => crate::gemini_config::get_gemini_dir(),
         AppType::OpenCode => crate::opencode_config::get_opencode_dir(),
         AppType::OpenClaw => crate::openclaw_config::get_openclaw_dir(),
@@ -273,6 +309,23 @@ pub async fn get_common_config_snippet(
         .db
         .get_config_snippet(&app_type)
         .map_err(|e| e.to_string())
+}
+
+/// 对前端编辑器里的 config.toml 文本做通用配置片段的合并/剥离。
+/// 放后端是为了走 toml_edit（保注释、保键序）；前端 smol-toml 的
+/// 整文档重序列化会破坏用户手写格式。
+#[tauri::command]
+pub async fn update_toml_common_config_snippet(
+    config_toml: String,
+    snippet_toml: String,
+    enabled: bool,
+) -> Result<String, String> {
+    crate::services::provider::update_toml_common_config_snippet(
+        &config_toml,
+        &snippet_toml,
+        enabled,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

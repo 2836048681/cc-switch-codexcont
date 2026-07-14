@@ -296,9 +296,7 @@ export const settingsApi = {
     return await invoke("get_codex_continue_config");
   },
 
-  async setCodexContinueConfig(
-    config: CodexContinueConfig,
-  ): Promise<boolean> {
+  async setCodexContinueConfig(config: CodexContinueConfig): Promise<boolean> {
     return await invoke("set_codex_continue_config", { config });
   },
 
@@ -343,7 +341,6 @@ export interface OptimizerConfig {
   enabled: boolean;
   thinkingOptimizer: boolean;
   cacheInjection: boolean;
-  cacheTtl: string;
 }
 
 export interface CodexContinueConfig {

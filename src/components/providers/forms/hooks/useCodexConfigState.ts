@@ -2,13 +2,17 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import {
   extractCodexBaseUrl,
   extractCodexExperimentalBearerToken,
+  extractCodexModelName,
   setCodexBaseUrl as setCodexBaseUrlInConfig,
+  setCodexModelName as setCodexModelNameInConfig,
   updateCodexExperimentalBearerToken,
 } from "@/utils/providerConfigUtils";
 import { normalizeTomlText } from "@/utils/textNormalization";
+import { extractGrokBaseUrl, setGrokBaseUrl } from "@/utils/grokConfigUtils";
 import type { CodexCatalogModel } from "@/types";
 
 interface UseCodexConfigStateProps {
+  appId?: "codex" | "grok";
   initialData?: {
     settingsConfig?: Record<string, unknown>;
   };
@@ -31,17 +35,22 @@ function pickCodexApiKey(
  * 管理 Codex 配置状态
  * Codex 配置包含两部分：auth.json (JSON) 和 config.toml (TOML 字符串)
  */
-export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
+export function useCodexConfigState({
+  appId = "codex",
+  initialData,
+}: UseCodexConfigStateProps) {
   const [codexAuth, setCodexAuthState] = useState("");
   const [codexConfig, setCodexConfigState] = useState("");
   const [codexApiKey, setCodexApiKey] = useState("");
   const [codexBaseUrl, setCodexBaseUrl] = useState("");
+  const [codexModel, setCodexModel] = useState("");
   const [codexCatalogModels, setCodexCatalogModels] = useState<
     CodexCatalogModel[]
   >([]);
   const [codexAuthError, setCodexAuthError] = useState("");
 
   const isUpdatingCodexBaseUrlRef = useRef(false);
+  const isUpdatingCodexModelRef = useRef(false);
 
   // 初始化 Codex 配置（编辑模式）
   useEffect(() => {
@@ -115,22 +124,37 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
       );
 
       // 提取 Base URL
-      const initialBaseUrl = extractCodexBaseUrl(configStr);
+      const initialBaseUrl =
+        appId === "grok"
+          ? extractGrokBaseUrl(configStr)
+          : extractCodexBaseUrl(configStr);
       if (initialBaseUrl) {
         setCodexBaseUrl(initialBaseUrl);
       }
 
       setCodexApiKey(pickCodexApiKey(auth, configStr));
     }
-  }, [initialData]);
+  }, [appId, initialData]);
 
   // 与 TOML 配置保持基础 URL 同步
   useEffect(() => {
     if (isUpdatingCodexBaseUrlRef.current) {
       return;
     }
-    const extracted = extractCodexBaseUrl(codexConfig) || "";
+    const extracted =
+      (appId === "grok"
+        ? extractGrokBaseUrl(codexConfig)
+        : extractCodexBaseUrl(codexConfig)) || "";
     setCodexBaseUrl((prev) => (prev === extracted ? prev : extracted));
+  }, [appId, codexConfig]);
+
+  // 与 TOML 配置保持默认模型同步（顶层 model 键）
+  useEffect(() => {
+    if (isUpdatingCodexModelRef.current) {
+      return;
+    }
+    const extracted = extractCodexModelName(codexConfig) || "";
+    setCodexModel((prev) => (prev === extracted ? prev : extracted));
   }, [codexConfig]);
 
   // 获取 API Key（从 auth JSON）
@@ -204,11 +228,13 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
       } catch {
         // ignore
       }
-      setCodexConfig((prev) =>
-        updateCodexExperimentalBearerToken(prev, trimmed),
-      );
+      if (appId === "codex") {
+        setCodexConfig((prev) =>
+          updateCodexExperimentalBearerToken(prev, trimmed),
+        );
+      }
     },
-    [codexAuth, setCodexAuth, setCodexConfig],
+    [appId, codexAuth, setCodexAuth, setCodexConfig],
   );
 
   // 处理 Codex Base URL 变化
@@ -218,9 +244,29 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
       setCodexBaseUrl(sanitized);
 
       isUpdatingCodexBaseUrlRef.current = true;
-      setCodexConfig((prev) => setCodexBaseUrlInConfig(prev, sanitized));
+      setCodexConfig((prev) =>
+        appId === "grok"
+          ? setGrokBaseUrl(prev, sanitized)
+          : setCodexBaseUrlInConfig(prev, sanitized),
+      );
       setTimeout(() => {
         isUpdatingCodexBaseUrlRef.current = false;
+      }, 0);
+    },
+    [appId, setCodexConfig],
+  );
+
+  // 处理默认模型变化（写回 TOML 顶层 model；清空则删掉该行，交回 Codex 内置默认）
+  // 剥控制字符：值可能来自 /models 下拉（远端数据），换行等会破坏单行 TOML 语义
+  const handleCodexModelChange = useCallback(
+    (model: string) => {
+      const sanitized = model.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+      setCodexModel(sanitized);
+
+      isUpdatingCodexModelRef.current = true;
+      setCodexConfig((prev) => setCodexModelNameInConfig(prev, sanitized));
+      setTimeout(() => {
+        isUpdatingCodexModelRef.current = false;
       }, 0);
     },
     [setCodexConfig],
@@ -234,13 +280,16 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
       setCodexConfig(normalized);
 
       if (!isUpdatingCodexBaseUrlRef.current) {
-        const extracted = extractCodexBaseUrl(normalized) || "";
+        const extracted =
+          (appId === "grok"
+            ? extractGrokBaseUrl(normalized)
+            : extractCodexBaseUrl(normalized)) || "";
         if (extracted !== codexBaseUrl) {
           setCodexBaseUrl(extracted);
         }
       }
     },
-    [setCodexConfig, codexBaseUrl],
+    [appId, setCodexConfig, codexBaseUrl],
   );
 
   // 重置配置（用于预设切换）
@@ -255,12 +304,15 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
       setCodexConfig(config);
       setCodexCatalogModels(modelCatalogModels);
 
-      const baseUrl = extractCodexBaseUrl(config);
+      const baseUrl =
+        appId === "grok"
+          ? extractGrokBaseUrl(config)
+          : extractCodexBaseUrl(config);
       setCodexBaseUrl(baseUrl || "");
 
       setCodexApiKey(pickCodexApiKey(auth, config));
     },
-    [setCodexAuth, setCodexConfig, setCodexCatalogModels],
+    [appId, setCodexAuth, setCodexConfig, setCodexCatalogModels],
   );
 
   return {
@@ -268,6 +320,7 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
     codexConfig,
     codexApiKey,
     codexBaseUrl,
+    codexModel,
     codexCatalogModels,
     codexAuthError,
     setCodexAuth,
@@ -275,6 +328,7 @@ export function useCodexConfigState({ initialData }: UseCodexConfigStateProps) {
     setCodexCatalogModels,
     handleCodexApiKeyChange,
     handleCodexBaseUrlChange,
+    handleCodexModelChange,
     handleCodexConfigChange,
     resetCodexConfig,
     getCodexAuthApiKey,

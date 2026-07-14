@@ -120,6 +120,7 @@ impl ConfigService {
 
         match app_type {
             AppType::Codex => Self::sync_codex_live(config, &current_id, &provider)?,
+            AppType::Grok => crate::grok_config::write_grok_provider_live(&provider)?,
             AppType::Claude => Self::sync_claude_live(config, &current_id, &provider)?,
             AppType::ClaudeDesktop => {
                 // Claude Desktop 3P profiles are managed by claude_desktop_config.
@@ -159,9 +160,7 @@ impl ConfigService {
         }
         let cfg_text = settings.get("config").and_then(Value::as_str);
 
-        let profile = crate::codex_config::CodexCatalogToolProfile::from_api_format(
-            provider.meta.as_ref().and_then(|m| m.api_format.as_deref()),
-        );
+        let profile = crate::proxy::providers::resolve_codex_catalog_tool_profile(provider);
 
         crate::codex_config::write_codex_provider_live_with_catalog(
             &provider.settings_config,

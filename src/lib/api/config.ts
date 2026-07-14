@@ -3,6 +3,24 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type AppType = "claude" | "codex" | "gemini" | "omo" | "omo_slim";
 
+export interface GrokGlobalConfig {
+  path: string;
+  content: string;
+  exists: boolean;
+}
+
+export async function readGrokGlobalConfig(): Promise<GrokGlobalConfig> {
+  return invoke<GrokGlobalConfig>("read_grok_global_config");
+}
+
+export async function writeGrokGlobalConfig(content: string): Promise<void> {
+  return invoke("write_grok_global_config", { content });
+}
+
+export async function applyGrokPrivacyProtection(): Promise<string> {
+  return invoke<string>("apply_grok_privacy_protection");
+}
+
 /**
  * 获取 Claude 通用配置片段（已废弃，使用 getCommonConfigSnippet）
  * @returns 通用配置片段（JSON 字符串），如果不存在则返回 null
@@ -46,6 +64,29 @@ export async function setCommonConfigSnippet(
   snippet: string,
 ): Promise<void> {
   return invoke("set_common_config_snippet", { appType, snippet });
+}
+
+/**
+ * 对编辑器里的 config.toml 文本做通用配置片段的合并/剥离
+ *
+ * 合并/剥离在后端用 toml_edit 完成（保注释、保键序）；前端 smol-toml
+ * 的整文档重序列化会破坏用户手写格式，禁止在前端做这类结构化改写。
+ *
+ * @param configToml - 编辑器当前的 config.toml 文本
+ * @param snippetToml - 通用配置片段（TOML 字符串）
+ * @param enabled - true 合并片段，false 按值匹配剥离片段
+ * @returns 更新后的 config.toml 文本
+ */
+export async function updateTomlCommonConfigSnippet(
+  configToml: string,
+  snippetToml: string,
+  enabled: boolean,
+): Promise<string> {
+  return invoke<string>("update_toml_common_config_snippet", {
+    configToml,
+    snippetToml,
+    enabled,
+  });
 }
 
 /**

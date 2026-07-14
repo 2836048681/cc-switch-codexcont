@@ -1,3 +1,3 @@
-304827e9278bee0db4edaeb28d56b9d3468ba7fde6864ca00695127e9a37a87a  CC-Switch-v3.16.5-Windows-x64-Setup.exe
-83834accd6d52a2cb415d5c373484b7ad0bc62d86c9876326b2a4b0deade167f  CC-Switch-v3.16.5-Windows.msi
-d7d7af3275d6e6496529be71a8463224c2de819d84ad13384be508d08bfd9ee6  CC-Switch-v3.16.5-Windows-Portable.zip
+ccea35a844e642220df3c5ed96f3b63d394c7557e1a9e31c41c92acabebcea63  CC-Switch-v3.17.0-Windows-x64-Setup.exe
+854b845f3e82958208afd076bbbeb6bc4d3f41c059b1681a4a303ccf03db471e  CC-Switch-v3.17.0-Windows.msi
+81e6d1c38acd8f492dd4f74264ca64fad94c215f1f22b29c617c318bcb22c403  CC-Switch-v3.17.0-Windows-Portable.zip

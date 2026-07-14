@@ -24,7 +24,6 @@ use axum::{
     Router,
 };
 use hyper_util::rt::TokioIo;
-use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{oneshot, RwLock};
@@ -58,16 +57,6 @@ pub struct ProxyServer {
     shutdown_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
     /// 服务器任务句柄，用于等待服务器实际关闭
     server_handle: Arc<RwLock<Option<JoinHandle<()>>>>,
-}
-
-fn format_bind_error(addr: SocketAddr, error: &std::io::Error) -> String {
-    if error.kind() == ErrorKind::AddrInUse || error.raw_os_error() == Some(10048) {
-        return format!(
-            "端口已被占用: {addr}。代理服务可能已在运行、存在重复 CC Switch 实例，或端口刚释放尚未可用。请关闭重复实例/占用该端口的程序后重试。原始错误: {error}"
-        );
-    }
-
-    error.to_string()
 }
 
 impl ProxyServer {
@@ -122,7 +111,7 @@ impl ProxyServer {
         // 绑定监听器
         let listener = tokio::net::TcpListener::bind(&addr)
             .await
-            .map_err(|e| ProxyError::BindFailed(format_bind_error(addr, &e)))?;
+            .map_err(|e| ProxyError::BindFailed(e.to_string()))?;
         let local_addr = listener
             .local_addr()
             .map_err(|e| ProxyError::BindFailed(e.to_string()))?;
@@ -338,6 +327,13 @@ impl ProxyServer {
             .route("/v1/responses", post(handlers::handle_responses))
             .route("/v1/v1/responses", post(handlers::handle_responses))
             .route("/codex/v1/responses", post(handlers::handle_responses))
+            // Grok Build 独立 OpenAI-compatible 路由。Responses 与 Chat 均原生透传，
+            // 不复用 Codex 的 Responses -> Chat 转换分支。
+            .route(
+                "/grok/v1/chat/completions",
+                post(handlers::handle_grok_chat_completions),
+            )
+            .route("/grok/v1/responses", post(handlers::handle_grok_responses))
             // OpenAI Responses Compact API (Codex CLI 远程压缩，透传)
             .route(
                 "/responses/compact",

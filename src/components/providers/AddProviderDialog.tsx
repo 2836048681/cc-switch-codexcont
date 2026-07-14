@@ -16,6 +16,7 @@ import { UniversalProviderFormModal } from "@/components/universal/UniversalProv
 import { UniversalProviderPanel } from "@/components/universal";
 import { providerPresets } from "@/config/claudeProviderPresets";
 import { codexProviderPresets } from "@/config/codexProviderPresets";
+import { grokProviderPresets } from "@/config/grokProviderPresets";
 import { geminiProviderPresets } from "@/config/geminiProviderPresets";
 import { claudeDesktopProviderPresets } from "@/config/claudeDesktopProviderPresets";
 import { extractCodexBaseUrl } from "@/utils/providerConfigUtils";
@@ -31,6 +32,7 @@ interface AddProviderDialogProps {
       providerKey?: string;
       suggestedDefaults?: OpenClawSuggestedDefaults;
       ensureClaudeDesktopOfficialSeed?: boolean;
+      ensureCodexOfficialSeed?: boolean;
     },
   ) => Promise<void> | void;
 }
@@ -116,6 +118,7 @@ export function AddProviderDialog({
         providerKey?: string;
         suggestedDefaults?: OpenClawSuggestedDefaults;
         ensureClaudeDesktopOfficialSeed?: boolean;
+        ensureCodexOfficialSeed?: boolean;
       } = {
         name: values.name.trim(),
         notes: values.notes?.trim() || undefined,
@@ -133,6 +136,14 @@ export function AddProviderDialog({
         );
         const preset = claudeDesktopProviderPresets[presetIndex];
         providerData.ensureClaudeDesktopOfficialSeed =
+          values.presetCategory === "official" &&
+          preset?.category === "official";
+      }
+
+      if (appId === "codex" && values.presetId) {
+        const presetIndex = parseInt(values.presetId.replace("codex-", ""));
+        const preset = codexProviderPresets[presetIndex];
+        providerData.ensureCodexOfficialSeed =
           values.presetCategory === "official" &&
           preset?.category === "official";
       }
@@ -188,6 +199,10 @@ export function AddProviderDialog({
                 preset.endpointCandidates.forEach(addUrl);
               }
             }
+          } else if (appId === "grok") {
+            const presetIndex = parseInt(values.presetId.replace("grok-", ""));
+            const preset = grokProviderPresets[presetIndex];
+            preset?.endpointCandidates?.forEach(addUrl);
           } else if (appId === "gemini") {
             const presets = geminiProviderPresets;
             const presetIndex = parseInt(
@@ -232,7 +247,7 @@ export function AddProviderDialog({
           if (env?.ANTHROPIC_BASE_URL) {
             addUrl(env.ANTHROPIC_BASE_URL);
           }
-        } else if (appId === "codex") {
+        } else if (appId === "codex" || appId === "grok") {
           const config = parsedConfig.config as string | undefined;
           if (config) {
             const extractedBaseUrl = extractCodexBaseUrl(config);
