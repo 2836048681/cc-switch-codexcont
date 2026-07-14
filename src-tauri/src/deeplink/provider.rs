@@ -434,9 +434,9 @@ fn build_grok_settings(request: &DeepLinkImportRequest) -> serde_json::Value {
     let name = request.name.as_deref().unwrap_or(model);
     let config = format!(
         "[models]\ndefault = \"ccswitch\"\n\n[model.ccswitch]\nmodel = {}\nbase_url = {}\nname = {}\napi_backend = \"responses\"\n",
-        toml_edit::Value::from(model).to_string(),
-        toml_edit::Value::from(endpoint).to_string(),
-        toml_edit::Value::from(name).to_string(),
+        toml_edit::Value::from(model),
+        toml_edit::Value::from(endpoint),
+        toml_edit::Value::from(name),
     );
     json!({
         "auth": { "OPENAI_API_KEY": request.api_key },

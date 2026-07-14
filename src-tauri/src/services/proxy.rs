@@ -1562,16 +1562,15 @@ impl ProxyService {
                     )?;
                 }
             }
-            AppType::Grok => {
-                if self.read_grok_live().is_ok() {
-                    if let Ok(Some(provider)) = self.get_current_provider_for_app(&AppType::Grok) {
-                        let _ = crate::grok_config::write_grok_takeover_live(
-                            &provider,
-                            &proxy_grok_base_url,
-                        );
-                    }
+            AppType::Grok if self.read_grok_live().is_ok() => {
+                if let Ok(Some(provider)) = self.get_current_provider_for_app(&AppType::Grok) {
+                    let _ = crate::grok_config::write_grok_takeover_live(
+                        &provider,
+                        &proxy_grok_base_url,
+                    );
                 }
             }
+            AppType::Grok => {}
             AppType::Gemini => {
                 if let Ok(mut live_config) = self.read_gemini_live() {
                     if let Some(env) = live_config.get_mut("env").and_then(|v| v.as_object_mut()) {

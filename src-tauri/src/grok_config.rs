@@ -72,7 +72,7 @@ fn backup_current_config(path: &Path, next_text: &str) -> Result<(), AppError> {
     backups.sort_by_key(|entry| entry.file_name());
     let remove_count = backups.len().saturating_sub(10);
     for entry in backups.into_iter().take(remove_count) {
-        fs::remove_file(entry.path()).map_err(|e| AppError::io(&entry.path(), e))?;
+        fs::remove_file(entry.path()).map_err(|e| AppError::io(entry.path(), e))?;
     }
     Ok(())
 }
