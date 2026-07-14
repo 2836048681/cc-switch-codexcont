@@ -17,6 +17,12 @@ export async function writeGrokGlobalConfig(content: string): Promise<void> {
   return invoke("write_grok_global_config", { content });
 }
 
+export async function mergeGrokProfileIntoGlobalConfig(
+  profileContent: string,
+): Promise<void> {
+  return invoke("merge_grok_profile_into_global_config", { profileContent });
+}
+
 export async function applyGrokPrivacyProtection(): Promise<string> {
   return invoke<string>("apply_grok_privacy_protection");
 }

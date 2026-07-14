@@ -39,6 +39,11 @@ pub async fn write_grok_global_config(content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn merge_grok_profile_into_global_config(profile_content: String) -> Result<(), String> {
+    crate::grok_config::merge_grok_profile_into_live(&profile_content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn apply_grok_privacy_protection() -> Result<String, String> {
     crate::grok_config::apply_privacy_protection_live().map_err(|e| e.to_string())
 }

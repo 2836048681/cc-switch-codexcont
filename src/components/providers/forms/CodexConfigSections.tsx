@@ -124,6 +124,8 @@ interface CodexConfigSectionProps {
   appId?: "codex" | "grok";
   showCodexFeatures?: boolean;
   onEditGrokGlobalConfig?: () => void;
+  onAddGrokGlobalConfig?: () => void;
+  isAddingGrokGlobalConfig?: boolean;
   value: string;
   onChange: (value: string) => void;
   providerName?: string;
@@ -143,6 +145,8 @@ export const CodexConfigSection: React.FC<CodexConfigSectionProps> = ({
   appId = "codex",
   showCodexFeatures = true,
   onEditGrokGlobalConfig,
+  onAddGrokGlobalConfig,
+  isAddingGrokGlobalConfig = false,
   value,
   onChange,
   providerName,
@@ -359,7 +363,19 @@ export const CodexConfigSection: React.FC<CodexConfigSectionProps> = ({
         </div>
       )}
       {appId === "grok" && onEditGrokGlobalConfig && (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-3">
+          {onAddGrokGlobalConfig && (
+            <button
+              type="button"
+              onClick={onAddGrokGlobalConfig}
+              disabled={isAddingGrokGlobalConfig}
+              className="text-xs text-blue-500 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400"
+            >
+              {isAddingGrokGlobalConfig
+                ? t("common.saving")
+                : t("grokConfig.addToGlobalConfig")}
+            </button>
+          )}
           <button
             type="button"
             onClick={onEditGrokGlobalConfig}

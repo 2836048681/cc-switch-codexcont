@@ -210,6 +210,63 @@ fn set_owned_key(live: &mut DocumentMut, provider: &DocumentMut, section: &str, 
     }
 }
 
+fn merge_profile_doc(live_doc: &mut DocumentMut, profile_doc: &DocumentMut) {
+    for (section, keys) in [
+        ("endpoints", &["models_base_url"][..]),
+        ("models", &["default", "web_search"][..]),
+        ("subagents", &["default_model"][..]),
+    ] {
+        for key in keys {
+            set_owned_key(live_doc, profile_doc, section, key);
+        }
+    }
+    live_doc.as_table_mut().remove("model");
+    if let Some(models) = profile_doc.get("model") {
+        live_doc["model"] = models.clone();
+    }
+}
+
+/// 将 Grok Profile 管理的段落加入现有全局配置，同时保留其它全局设置。
+pub fn merge_grok_profile_config_text(
+    existing_text: &str,
+    profile_text: &str,
+) -> Result<String, AppError> {
+    let mut live_doc = if existing_text.trim().is_empty() {
+        DocumentMut::new()
+    } else {
+        existing_text.parse::<DocumentMut>().map_err(|e| {
+            AppError::localized(
+                "grok.live.invalid_toml",
+                format!("现有 Grok config.toml 格式错误: {e}"),
+                format!("Existing Grok config.toml is invalid: {e}"),
+            )
+        })?
+    };
+    let profile_doc = profile_text.parse::<DocumentMut>().map_err(|e| {
+        AppError::localized(
+            "provider.grok.config.invalid_toml",
+            format!("Grok Profile TOML 格式错误: {e}"),
+            format!("Invalid Grok Profile TOML: {e}"),
+        )
+    })?;
+    selected_model_table(&profile_doc).ok_or_else(|| {
+        AppError::localized(
+            "provider.grok.model.missing",
+            "Grok Profile 缺少 [model.*] 模型定义",
+            "Grok Profile is missing a [model.*] model definition",
+        )
+    })?;
+
+    merge_profile_doc(&mut live_doc, &profile_doc);
+    Ok(live_doc.to_string())
+}
+
+pub fn merge_grok_profile_into_live(profile_text: &str) -> Result<(), AppError> {
+    let existing = fs::read_to_string(get_grok_config_path()).unwrap_or_default();
+    let next = merge_grok_profile_config_text(&existing, profile_text)?;
+    write_grok_config_text(&next)
+}
+
 /// 删除所有供应商拥有的字段，让 Grok 回退到 `grok login` 管理的官方账号。
 pub fn use_official_auth_config_text(text: &str) -> Result<String, AppError> {
     let mut doc = if text.trim().is_empty() {
@@ -331,19 +388,7 @@ pub fn patch_config_text_for_provider(
     if let Some(base_url) = base_url_override {
         provider_doc["endpoints"]["models_base_url"] = value(base_url);
     }
-    for (section, keys) in [
-        ("endpoints", &["models_base_url"][..]),
-        ("models", &["default", "web_search"][..]),
-        ("subagents", &["default_model"][..]),
-    ] {
-        for key in keys {
-            set_owned_key(&mut live_doc, &provider_doc, section, key);
-        }
-    }
-    live_doc.as_table_mut().remove("model");
-    if let Some(models) = provider_doc.get("model") {
-        live_doc["model"] = models.clone();
-    }
+    merge_profile_doc(&mut live_doc, &provider_doc);
     Ok(live_doc.to_string())
 }
 
@@ -655,6 +700,34 @@ url = "https://example.test/mcp"
             doc["mcp_servers"]["keep"]["url"].as_str(),
             Some("https://example.test/mcp")
         );
+    }
+
+    #[test]
+    fn merge_profile_into_global_config_preserves_unmanaged_sections() {
+        let existing = r#"[features]
+telemetry = false
+
+[models]
+default = "old"
+default_reasoning_effort = "high"
+
+[model.old]
+model = "old-model"
+"#;
+        let profile = provider().settings_config["config"]
+            .as_str()
+            .expect("profile config");
+        let merged = merge_grok_profile_config_text(existing, profile).expect("merge profile");
+        let doc = merged.parse::<DocumentMut>().expect("parse merged config");
+
+        assert_eq!(doc["features"]["telemetry"].as_bool(), Some(false));
+        assert_eq!(
+            doc["models"]["default_reasoning_effort"].as_str(),
+            Some("high")
+        );
+        assert_eq!(doc["models"]["default"].as_str(), Some("fast"));
+        assert!(doc["model"].get("old").is_none());
+        assert!(doc["model"]["fast"].is_table());
     }
 
     #[test]

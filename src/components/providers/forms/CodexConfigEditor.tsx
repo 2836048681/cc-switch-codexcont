@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { CodexAuthSection, CodexConfigSection } from "./CodexConfigSections";
 import { CodexCommonConfigModal } from "./CodexCommonConfigModal";
 import { GrokGlobalConfigModal } from "./GrokGlobalConfigModal";
+import { configApi } from "@/lib/api";
 
 interface CodexConfigEditorProps {
   appId?: "codex" | "grok";
@@ -71,6 +73,20 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
   const { t } = useTranslation();
   const [isCommonConfigModalOpen, setIsCommonConfigModalOpen] = useState(false);
   const [isGrokGlobalConfigOpen, setIsGrokGlobalConfigOpen] = useState(false);
+  const [isAddingGrokGlobalConfig, setIsAddingGrokGlobalConfig] =
+    useState(false);
+
+  const handleAddGrokGlobalConfig = async () => {
+    setIsAddingGrokGlobalConfig(true);
+    try {
+      await configApi.mergeGrokProfileIntoGlobalConfig(configValue);
+      toast.success(t("grokConfig.addedToGlobalConfig"));
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setIsAddingGrokGlobalConfig(false);
+    }
+  };
 
   const handleCloseCommonConfigModal = () => {
     onCommonConfigErrorClear();
@@ -112,6 +128,8 @@ const CodexConfigEditor: React.FC<CodexConfigEditorProps> = ({
         isProxyTakeover={isProxyTakeover}
         showCodexFeatures={showCodexFeatures}
         onEditGrokGlobalConfig={() => setIsGrokGlobalConfigOpen(true)}
+        onAddGrokGlobalConfig={handleAddGrokGlobalConfig}
+        isAddingGrokGlobalConfig={isAddingGrokGlobalConfig}
       />
 
       {/* Common Config Modal */}

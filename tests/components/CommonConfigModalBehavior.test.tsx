@@ -162,6 +162,11 @@ describe("Common config modals", () => {
       }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("button", {
+        name: /grokConfig.addToGlobalConfig|加入全局配置/,
+      }),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("checkbox", {
         name: "codexConfig.enableGoalMode",
       }),

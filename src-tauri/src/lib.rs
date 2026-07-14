@@ -1222,6 +1222,7 @@ pub fn run() {
             commands::extract_common_config_snippet,
             commands::read_grok_global_config,
             commands::write_grok_global_config,
+            commands::merge_grok_profile_into_global_config,
             commands::apply_grok_privacy_protection,
             commands::read_live_provider_settings,
             commands::get_settings,

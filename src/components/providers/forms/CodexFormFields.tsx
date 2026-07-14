@@ -200,6 +200,8 @@ export function CodexFormFields({
   onLocalProxyBodyOverrideChange,
 }: CodexFormFieldsProps) {
   const { t } = useTranslation();
+  const defaultModelI18nPrefix =
+    appId === "grok" ? "grokConfig" : "codexConfig";
 
   const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
@@ -481,9 +483,13 @@ export function CodexFormFields({
               id="codexDefaultModel"
               value={codexModel}
               onChange={(event) => onModelChange(event.target.value)}
-              placeholder={t("codexConfig.defaultModelPlaceholder", {
-                defaultValue: "例如: gpt-5.6",
-              })}
+              placeholder={t(
+                `${defaultModelI18nPrefix}.defaultModelPlaceholder`,
+                {
+                  defaultValue:
+                    appId === "grok" ? "例如: grok-4.5" : "例如: gpt-5.6",
+                },
+              )}
               className="flex-1"
             />
             <Button
@@ -509,9 +515,11 @@ export function CodexFormFields({
             )}
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {t("codexConfig.defaultModelHint", {
+            {t(`${defaultModelI18nPrefix}.defaultModelHint`, {
               defaultValue:
-                "Codex 默认请求的模型，随时可改，无需等待预设更新。留空且配置了模型映射时，默认使用映射第一行。",
+                appId === "grok"
+                  ? "Grok Build 默认使用的模型，可随时修改。留空时保留当前 Profile 的默认模型。"
+                  : "Codex 默认请求的模型，随时可改，无需等待预设更新。留空且配置了模型映射时，默认使用映射第一行。",
             })}
           </p>
           {isDefaultModelOutsideCatalog && (
